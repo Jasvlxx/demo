@@ -3,7 +3,7 @@ import sys
 import warnings
 from datetime import datetime
 
-from agenteinm.crew import Agenteinm
+from crew import Agenteinm
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
