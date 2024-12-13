@@ -2,15 +2,25 @@
 import sys
 import warnings
 from datetime import datetime
-
+import os
+from dotenv import load_dotenv
 from crew import Agenteinm
+from services.mongodb_to_drive_service import (
+    connect_mongodb,
+    extract_metadata,
+    save_metadata_to_file,
+    upload_to_google_drive
+)
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
+
+# Cargar variables de entorno
+load_dotenv()
 
 def run():
     """
     Ejecuta el crew inmobiliario con estructura jerárquica.
-    El Task Manager coordina el análisis integral del mercado inmobiliario.
+    También extrae metadatos de MongoDB y los guarda en Google Drive automáticamente.
     """
     inputs = {
         'zona': 'Santiago Centro',
@@ -26,9 +36,10 @@ def run():
     print(f"Tipo de Propiedad: {inputs['tipo_propiedad']}")
     print(f"Rango de Presupuesto: {inputs['presupuesto_min']} - {inputs['presupuesto_max']}\n")
     
+    # Ejecutar crew inmobiliario
     crew = Agenteinm().crew()
     results = crew.kickoff(inputs=inputs)
-    
+
     reports_dir = f"reports/{datetime.now().strftime('%Y-%m-%d')}"
     print("\nAnálisis completado!")
     print(f"Reportes generados en: {reports_dir}/")
@@ -36,6 +47,20 @@ def run():
     print("- legal_review_[timestamp].md: Análisis legal del Abogado")
     print("- coordination_report_[timestamp].md: Reporte integrado del Task Manager")
     
+    # Iniciar extracción y subida de metadatos
+    print("\nIniciando extracción y guardado de metadatos en Google Drive...")
+    db = connect_mongodb()
+    if db is not None:  # Validar conexión
+        metadata = extract_metadata(db)
+        if metadata:
+            save_metadata_to_file(metadata, "mongodb_metadata.json")
+            upload_to_google_drive("mongodb_metadata.json")
+        else:
+            print("❌ No se pudieron extraer metadatos.")
+    else:
+        print("❌ No se pudo conectar a la base de datos.")
+    
+    print("\nTarea de metadatos completada con éxito.")
     return results
 
 def train():
